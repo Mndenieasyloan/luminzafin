@@ -265,7 +265,7 @@
       bankName: text(rowValue(row, F.bankName)),
       accountNumber: text(rowValue(row, F.accountNumber)),
       uploadedDocuments: fileNames(row),
-      status: "Under processing",
+      status: "Application Successfully Accepted Email info@luminzafinance.com to proceed",
       nextStep: "Your application is under processing. Email info@luminzafinance.com to proceed."
     };
   }
