@@ -8,7 +8,7 @@
    * A browser-only integration necessarily exposes this token to visitors.
    */
   const CONFIG = Object.freeze({
-    TOKEN: "REPLACE_WITH_YOUR_BASEROW_TOKEN",
+    TOKEN: "LG6hnTBxgBG78FueElsSwpHRd4Wep1oL",
     TABLE_ID: "936442",
     API_URL: "https://api.baserow.io/api"
   });
