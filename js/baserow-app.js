@@ -8,7 +8,7 @@
    * A browser-only integration necessarily exposes this token to visitors.
    */
   const CONFIG = Object.freeze({
-    TOKEN: "LG6hnTBxgBG78FueElsSwpHRd4Wep1oL",
+    TOKEN: "REPLACE_WITH_YOUR_BASEROW_TOKEN",
     TABLE_ID: "936442",
     API_URL: "https://api.baserow.io/api"
   });
@@ -265,7 +265,7 @@
       bankName: text(rowValue(row, F.bankName)),
       accountNumber: text(rowValue(row, F.accountNumber)),
       uploadedDocuments: fileNames(row),
-      status: "Application Successfully Accepted Email info@luminzafinance.com to proceed",
+      status: "Under processing",
       nextStep: "Your application is under processing. Email info@luminzafinance.com to proceed."
     };
   }
@@ -294,6 +294,110 @@
     let step = 1;
     const total = panels.length;
 
+    function applicationControl(panelNumber, labelPattern, selector = "input, select") {
+      const panel = form.querySelector(`.panel[data-panel="${panelNumber}"]`);
+      if (!panel) return null;
+      const label = [...panel.querySelectorAll("label.field")]
+        .find((node) => labelPattern.test(node.textContent.trim()));
+      return label ? label.querySelector(selector) : null;
+    }
+
+    function applicationValues() {
+      const documentPanel = form.querySelector('.panel[data-panel="5"]');
+      const statementFormat = document.getElementById("statementFormat");
+      const separateInputs = documentPanel
+        ? [...documentPanel.querySelectorAll('input[type="file"]')]
+        : [];
+      const idDoc = document.getElementById("idDocumentUpload")
+        || applicationControl(5, /^ID document \/ Passport/i);
+      const singleStatement = document.getElementById("singleStatementUpload");
+      const month1 = document.querySelector('input[name="month_1_bank_statement"]');
+      const month2 = document.querySelector('input[name="month_2_bank_statement"]');
+      const month3 = document.querySelector('input[name="month_3_bank_statement"]');
+      let bankStatement1 = separateInputs[1] || null;
+      let bankStatement2 = separateInputs[2] || null;
+      let bankStatement3 = separateInputs[3] || null;
+
+      if (statementFormat && statementFormat.value === "single") {
+        bankStatement1 = singleStatement;
+        bankStatement2 = null;
+        bankStatement3 = null;
+      } else if (statementFormat && statementFormat.value === "separate") {
+        bankStatement1 = month1;
+        bankStatement2 = month2;
+        bankStatement3 = month3;
+      }
+
+      return {
+        loanAmount: applicationControl(2, /^Amount you would like to borrow/i)
+          || applicationControl(1, /^Loan amount/i),
+        loanType: applicationControl(1, /^Loan type/i),
+        loanPurpose: applicationControl(2, /^Loan purpose/i)
+          || applicationControl(1, /^Loan purpose/i),
+        loanTerm: applicationControl(2, /^Preferred term/i),
+        name: applicationControl(3, /^First name/i),
+        lastname: applicationControl(3, /^Last name/i),
+        idNo: applicationControl(3, /^Passport or National ID number/i),
+        email: applicationControl(3, /^Email address/i),
+        phone: applicationControl(3, /^Phone number/i),
+        address: applicationControl(3, /^Physical address/i),
+        employ: applicationControl(4, /^Employment status/i),
+        income: applicationControl(4, /^Monthly income after tax/i),
+        monthlyExpense: applicationControl(4, /^Monthly expenses/i),
+        idDoc,
+        bankStatement1,
+        bankStatement2,
+        bankStatement3,
+        bankName: applicationControl(6, /^Bank name/i),
+        accountNumber: applicationControl(6, /^Account number/i)
+      };
+    }
+
+    function validateApplicationDocuments() {
+      const idInput = document.getElementById("idDocumentUpload");
+      const statementSection = document.getElementById("documentStatementSection");
+      const idSection = document.getElementById("documentIdSection");
+      const statementFormat = document.getElementById("statementFormat");
+      const singleInput = document.getElementById("singleStatementUpload");
+      const separateInputs = [
+        document.querySelector('input[name="month_1_bank_statement"]'),
+        document.querySelector('input[name="month_2_bank_statement"]'),
+        document.querySelector('input[name="month_3_bank_statement"]')
+      ].filter(Boolean);
+
+      if (!idInput || !statementFormat) return true;
+      if (!idInput.files.length) {
+        if (idSection) idSection.classList.remove("hidden");
+        idInput.required = true;
+        idInput.reportValidity();
+        return false;
+      }
+      if (!statementFormat.value) {
+        if (statementSection) statementSection.classList.remove("hidden");
+        statementFormat.required = true;
+        statementFormat.reportValidity();
+        return false;
+      }
+      if (statementFormat.value === "single" && (!singleInput || !singleInput.files.length)) {
+        if (statementSection) statementSection.classList.remove("hidden");
+        if (singleInput) {
+          singleInput.required = true;
+          singleInput.reportValidity();
+        }
+        return false;
+      }
+      if (statementFormat.value === "separate"
+        && separateInputs.some((input) => !input.files.length)) {
+        if (statementSection) statementSection.classList.remove("hidden");
+        separateInputs.forEach((input) => {
+          input.required = true;
+          if (!input.files.length) input.reportValidity();
+        });
+        return false;
+      }
+      return true;
+    }
+
     function showStep() {
       panels.forEach((panel) => {
         panel.classList.toggle("hidden", Number(panel.dataset.panel) !== step);
@@ -312,6 +416,7 @@
       next.onclick = () => {
         const currentPanel = panels.find((panel) => Number(panel.dataset.panel) === step);
         if (!currentPanel || !checkPanel(currentPanel)) return;
+        if (step === 5 && !validateApplicationDocuments()) return;
         if (step < total) {
           step += 1;
           showStep();
@@ -330,17 +435,18 @@
     form.onsubmit = async (event) => {
       event.preventDefault();
       if (!panels.every(checkPanel)) return;
+      if (!validateApplicationDocuments()) return;
       if (!configurationReady()) {
         setMessage('<div class="lumin-result is-error"><strong>Submission is not configured.</strong><div>Please complete the website configuration before submitting.</div></div>', "form-message");
         return;
       }
 
-      const data = values();
+      const data = applicationValues();
       const files = {
-        idDoc: data.idDoc.files[0],
-        bankStatement1: data.bankStatement1.files[0],
-        bankStatement2: data.bankStatement2.files[0],
-        bankStatement3: data.bankStatement3.files[0]
+        idDoc: data.idDoc && data.idDoc.files[0],
+        bankStatement1: data.bankStatement1 && data.bankStatement1.files[0],
+        bankStatement2: data.bankStatement2 && data.bankStatement2.files[0],
+        bankStatement3: data.bankStatement3 && data.bankStatement3.files[0]
       };
       const fields = {
         [F.name]: text(data.name.value),
@@ -372,10 +478,10 @@
           uploadFile(files.bankStatement2),
           uploadFile(files.bankStatement3)
         ]);
-        fields[F.idDoc] = [{ name: idDoc.name }];
-        fields[F.bankStatement1] = [{ name: bank1.name }];
-        fields[F.bankStatement2] = [{ name: bank2.name }];
-        fields[F.bankStatement3] = [{ name: bank3.name }];
+        if (idDoc) fields[F.idDoc] = [{ name: idDoc.name }];
+        if (bank1) fields[F.bankStatement1] = [{ name: bank1.name }];
+        if (bank2) fields[F.bankStatement2] = [{ name: bank2.name }];
+        if (bank3) fields[F.bankStatement3] = [{ name: bank3.name }];
         await createRow(fields);
         setMessage(`<div class="lumin-result" role="status" aria-live="polite">
           <strong>Application successfully submitted.</strong>
