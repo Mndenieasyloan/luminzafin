@@ -1,0 +1,1181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loan Approval Agreement - LUMIN ZA FINANCE Loans</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* ================================================================
+           RESET + BODY
+        ================================================================ */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #c8c8c8;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* ================================================================
+           LOADING OVERLAY
+        ================================================================ */
+        .loading-overlay {
+            position: fixed; inset: 0;
+            background: rgba(255,255,255,0.9);
+            display: none; flex-direction: column;
+            justify-content: center; align-items: center;
+            gap: 14px; z-index: 6000;
+        }
+        .loading-spinner {
+            width: 50px; height: 50px;
+            border: 5px solid #ddd;
+            border-top-color: #222;
+            border-radius: 50%;
+            animation: spin 0.85s linear infinite;
+        }
+        .loading-text { font-size: 14px; color: #222; font-weight: bold; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ================================================================
+           VERIFICATION MODAL
+        ================================================================ */
+        .verification-modal {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.75);
+            display: flex; justify-content: center;
+            align-items: center; z-index: 4000; padding: 20px;
+        }
+        .verification-content {
+            background: #fff; padding: 38px 34px;
+            border-radius: 4px; max-width: 480px; width: 100%;
+            text-align: center;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.25);
+            border: 1px solid #ccc;
+        }
+        .vf-logo-wrap { margin-bottom: 20px; }
+        .vf-logo-img { max-height: 52px; object-fit: contain; }
+        .vf-company { font-size: 22px; font-weight: 900; color: #1a3a6b; letter-spacing: 4px; }
+        .vf-company-sub { font-size: 11px; color: #2256b0; letter-spacing: 2px; margin-top: 1px; }
+        .vf-title { font-size: 18px; font-weight: bold; color: #111; margin-bottom: 7px; }
+        .vf-sub { font-size: 13px; color: #555; margin-bottom: 26px; line-height: 1.5; }
+        .form-group { text-align: left; margin-bottom: 16px; }
+        .form-label { display: block; font-weight: bold; font-size: 13px; color: #222; margin-bottom: 7px; }
+        .form-input {
+            width: 100%; padding: 11px 14px;
+            border: 1.5px solid #bbb; border-radius: 3px;
+            font-size: 14px; transition: border-color 0.2s;
+        }
+        .form-input:focus { outline: none; border-color: #333; }
+        .verify-btn {
+            width: 100%; padding: 13px;
+            background: #222;
+            color: #fff; border: none; border-radius: 3px;
+            font-size: 14px; font-weight: bold; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .verify-btn:hover { background: #000; }
+        .verify-btn:disabled { background: #999; cursor: default; }
+        .error-message { color: #900; font-size: 13px; margin-top: 10px; display: none; }
+        .success-message { color: #2a6e2a; font-size: 13px; margin-top: 10px; display: none; }
+
+        /* ================================================================
+           ROW SELECT MODAL
+        ================================================================ */
+        .row-select-modal {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.75);
+            display: none; justify-content: center;
+            align-items: center; z-index: 4500; padding: 20px;
+        }
+        .row-select-content {
+            background: #fff; padding: 28px 26px;
+            border-radius: 4px; max-width: 540px; width: 100%;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.25);
+            border: 1px solid #ccc;
+        }
+        .rs-title { font-size: 17px; font-weight: bold; color: #111; margin-bottom: 6px; }
+        .rs-sub { font-size: 13px; color: #555; margin-bottom: 18px; }
+        .row-card {
+            border: 1.5px solid #ccc; border-radius: 3px;
+            padding: 13px 15px; margin-bottom: 9px; cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+        }
+        .row-card:hover { border-color: #333; background: #f5f5f5; }
+        .row-card-name { font-weight: bold; color: #111; }
+        .row-card-detail { font-size: 12px; color: #555; margin-top: 3px; }
+
+        /* ================================================================
+           PDF VIEWER SHELL
+        ================================================================ */
+        .modal-overlay {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.78);
+            display: none; justify-content: center;
+            align-items: center; z-index: 1000; padding: 10px;
+        }
+        .pdf-viewer {
+            width: 100%; max-width: 980px; height: 92vh;
+            background: #606060; border-radius: 4px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+            display: flex; flex-direction: column; overflow: hidden;
+            position: relative;
+        }
+        .pdf-header {
+            background: #1a1a1a; color: #fff;
+            padding: 10px 14px; display: flex;
+            justify-content: space-between; align-items: center;
+            min-height: 56px; flex-shrink: 0; flex-wrap: wrap; gap: 8px;
+        }
+        .pdf-title { font-size: 14px; font-weight: bold; }
+        .pdf-controls { display: flex; gap: 8px; flex-wrap: wrap; }
+        .control-btn {
+            background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25); color: #fff;
+            padding: 7px 13px; border-radius: 3px; cursor: pointer;
+            font-size: 13px; display: flex; align-items: center; gap: 5px;
+            transition: background 0.2s; white-space: nowrap;
+        }
+        .control-btn:hover { background: rgba(255,255,255,0.28); }
+        .close-btn {
+            background: #555; border: none; color: #fff;
+            width: 28px; height: 28px; border-radius: 50%;
+            cursor: pointer; font-size: 16px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .close-btn:hover { background: #333; }
+        .pdf-content-wrapper {
+            flex: 1; overflow: hidden; background: #606060;
+            padding: 18px 0; display: flex; justify-content: center;
+        }
+        .pdf-content {
+            height: 100%; overflow-y: auto; overflow-x: hidden;
+            width: 100%; display: flex; flex-direction: column;
+            align-items: center; gap: 20px; padding: 0 12px;
+            scrollbar-width: thin; scrollbar-color: #999 #555;
+        }
+        .pdf-content::-webkit-scrollbar { width: 6px; }
+        .pdf-content::-webkit-scrollbar-thumb { background: #999; border-radius: 3px; }
+
+        /* ================================================================
+           DOCUMENT PAGES — A4 PROPORTIONS, TIMES NEW ROMAN
+        ================================================================ */
+        .document-page {
+            width: 100%;
+            max-width: 794px;
+            min-height: 1123px;
+            background: #fff;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+            position: relative;
+            flex-shrink: 0;
+            margin-bottom: 20px;
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 13pt;
+            color: #111;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ================================================================
+           PAGE INNER PADDING
+        ================================================================ */
+        .page-body {
+            flex: 1;
+            padding: 48px 52px 40px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ================================================================
+           COVER PAGE — original colours/design fully preserved
+        ================================================================ */
+        .cover-page { background: #fff; }
+
+        .cover-date-banner {
+            position: absolute; top: 36px; left: 0;
+            background: linear-gradient(90deg,#1a3a6b,#2256b0);
+            color: #fff; font-family: Arial, sans-serif;
+            font-size: 13px; font-weight: bold;
+            padding: 9px 30px 9px 22px;
+            clip-path: polygon(0 0, calc(100% - 18px) 0, 100% 100%, 0 100%);
+            min-width: 170px; max-width: 70%;
+            letter-spacing: 0.5px;
+        }
+        .cover-seal {
+            position: absolute; top: 22px; right: 30px;
+            width: 82px; height: 82px;
+        }
+        .cover-seal-img { width: 100%; height: 100%; object-fit: contain; }
+
+        .cover-deco-left {
+            position: absolute; left: 0; top: 0; bottom: 0; width: 10px;
+            background: linear-gradient(180deg,#1a3a6b,#2256b0);
+        }
+        .cover-deco-right {
+            position: absolute; right: 0; top: 0; bottom: 0; width: 10px;
+            background: linear-gradient(180deg,#1a3a6b,#2256b0);
+        }
+
+        /* Cover centre — just logo + title + parties, no cluttered details */
+        .cover-center {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            gap: 0; padding: 0 30px;
+        }
+        .cover-logo-area {
+            text-align: center; margin-bottom: 28px;
+        }
+        .cover-logo-img {
+            max-height: 80px; max-width: 180px;
+            object-fit: contain; margin-bottom: 8px;
+            display: block; margin-left: auto; margin-right: auto;
+        }
+        .cover-company-name {
+            font-family: Arial, sans-serif;
+            font-size: 28px; font-weight: 900;
+            color: #1a3a6b; letter-spacing: 5px;
+        }
+        .cover-company-sub {
+            font-family: Arial, sans-serif;
+            font-size: 11px; color: #2256b0;
+            letter-spacing: 3px; margin-top: 1px;
+        }
+        .cover-company-reg {
+            font-family: Arial, sans-serif;
+            font-size: 9px; color: #777; letter-spacing: 1px; margin-top: 5px;
+        }
+
+        .cover-title-block { text-align: center; margin-bottom: 22px; }
+        .cover-doc-title {
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 20px; font-weight: bold;
+            color: #111; letter-spacing: 1px;
+            text-transform: uppercase; margin-bottom: 10px;
+        }
+        .cover-divider {
+            width: 90px; height: 1.5px;
+            background: #1a3a6b;
+            margin: 0 auto 16px;
+        }
+        .cover-between {
+            font-size: 11px; color: #555; letter-spacing: 1px;
+            margin: 8px 0; text-transform: uppercase;
+        }
+        .cover-party {
+            font-size: 15px; font-weight: bold;
+            color: #111; text-transform: uppercase; margin: 5px 0;
+        }
+
+        /* Compact info strip — only non-sensitive fields (no email/phone/address) */
+        .cover-info-strip {
+            display: flex; gap: 0;
+            border: 1px solid #bbb;
+            font-family: Arial, sans-serif;
+            font-size: 10px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+        .cover-info-cell {
+            flex: 1;
+            padding: 8px 12px;
+            border-right: 1px solid #bbb;
+            text-align: center;
+        }
+        .cover-info-cell:last-child { border-right: none; }
+        .cover-info-cell-label {
+            color: #777; letter-spacing: 0.5px;
+            text-transform: uppercase; font-size: 8px;
+            display: block; margin-bottom: 3px;
+        }
+        .cover-info-cell-value {
+            color: #111; font-weight: bold; font-size: 11px;
+        }
+
+        .cover-footer {
+            position: absolute; bottom: 22px; left: 0; right: 0;
+            text-align: center; font-family: Arial, sans-serif;
+            font-size: 8.5px; color: #666; line-height: 1.6;
+            padding: 0 26px;
+        }
+
+        /* ================================================================
+           PAGE HEADER (non-cover pages)
+        ================================================================ */
+        .doc-page-header {
+            display: flex; align-items: center; justify-content: space-between;
+            border-bottom: 2px solid #1a3a6b;
+            padding-bottom: 10px; margin-bottom: 22px;
+        }
+        .doc-page-header-left {
+            display: flex; align-items: center; gap: 10px;
+        }
+        .doc-header-logo-img {
+            max-height: 36px; max-width: 80px; object-fit: contain;
+        }
+        .doc-header-company {
+            font-family: Arial, sans-serif;
+            font-size: 15px; font-weight: 900;
+            color: #1a3a6b; letter-spacing: 3px;
+        }
+        .doc-header-sub {
+            font-family: Arial, sans-serif;
+            font-size: 8px; color: #2256b0; letter-spacing: 1.5px; margin-top: 1px;
+        }
+        .doc-page-header-right {
+            text-align: right;
+            font-family: Arial, sans-serif;
+            font-size: 9px; color: #555; line-height: 1.4;
+        }
+
+        /* ================================================================
+           SECTION HEADINGS
+        ================================================================ */
+        .doc-section-heading {
+            font-size: 12pt; font-weight: bold;
+            color: #111; text-transform: uppercase;
+            border-bottom: 1px solid #333;
+            padding-bottom: 3px; margin: 18px 0 10px;
+            letter-spacing: 0.5px;
+        }
+        .doc-sub-heading {
+            font-size: 11pt; font-weight: bold;
+            color: #111; margin: 12px 0 6px;
+        }
+
+        /* ================================================================
+           LOAN SUMMARY TABLE
+        ================================================================ */
+        .loan-table {
+            width: 100%; border-collapse: collapse;
+            margin: 12px 0 18px; font-size: 11pt;
+        }
+        .loan-table th {
+            background: #222; color: #fff;
+            padding: 9px 10px; text-align: center;
+            font-family: Arial, sans-serif; font-size: 9pt;
+            font-weight: bold; letter-spacing: 0.3px;
+        }
+        .loan-table td {
+            padding: 9px 10px; text-align: center;
+            font-weight: bold; border: 1px solid #ccc;
+            background: #f7f7f7;
+        }
+        .loan-table td.amount-cell { background: #f0f0f0; color: #111; }
+
+        /* ================================================================
+           TEXT / LISTS
+        ================================================================ */
+        .doc-para { margin-bottom: 9px; line-height: 1.65; font-size: 12pt; }
+        .doc-list { margin: 8px 0 10px 0; padding: 0; list-style: none; }
+        .doc-list li {
+            padding: 5px 10px 5px 22px;
+            position: relative; font-size: 12pt;
+            line-height: 1.55; margin-bottom: 4px;
+        }
+        .doc-list li::before {
+            content: "•";
+            position: absolute; left: 8px;
+            color: #111; font-weight: bold;
+        }
+
+        .notice-box {
+            border: 1px solid #555; border-left-width: 3px;
+            padding: 11px 14px; margin: 12px 0;
+            background: #f9f9f9; font-size: 12pt;
+            line-height: 1.6;
+        }
+        .fee-badge {
+            background: #333; color: #fff;
+            padding: 1px 7px; border-radius: 2px;
+            font-weight: bold; font-size: 12pt;
+        }
+
+        /* ================================================================
+           SIGNATURE PAGE
+        ================================================================ */
+        .sig-area {
+            display: flex; justify-content: space-between;
+            margin: 32px 0 18px; gap: 30px; flex-wrap: wrap;
+        }
+        .sig-block {
+            flex: 1; min-width: 160px; max-width: 48%; text-align: center;
+        }
+        .sig-image-wrap {
+            height: 60px; border-bottom: 1.5px solid #333;
+            display: flex; align-items: flex-end;
+            justify-content: center; padding-bottom: 6px;
+            margin-bottom: 6px;
+        }
+        .sig-img { max-height: 50px; max-width: 180px; object-fit: contain; }
+        .sig-label { font-weight: bold; font-size: 10pt; color: #111; }
+        .sig-name { font-size: 10pt; color: #333; margin-top: 2px; }
+
+        .approved-stamp {
+            display: inline-block;
+            background: #111;
+            color: #fff; font-family: Arial, sans-serif;
+            font-size: 10px; font-weight: bold;
+            padding: 4px 14px; border-radius: 2px;
+            letter-spacing: 2px; margin-bottom: 6px;
+        }
+
+        .seal-area { text-align: center; margin: 18px 0; }
+        .seal-img { max-height: 90px; max-width: 90px; object-fit: contain; }
+
+        .doc-footer {
+            margin-top: auto; border-top: 1px solid #bbb;
+            padding-top: 12px; text-align: center;
+            font-family: Arial, sans-serif;
+            font-size: 8.5pt; color: #555; line-height: 1.5;
+        }
+        .doc-footer strong { color: #111; }
+
+        /* ================================================================
+           ZOOM CONTROLS
+        ================================================================ */
+        .zoom-controls {
+            position: absolute; bottom: 16px; left: 16px;
+            display: flex; gap: 7px; z-index: 1010;
+        }
+        .zoom-btn {
+            background: rgba(0,0,0,0.5); color: #fff; border: none;
+            width: 36px; height: 36px; border-radius: 50%;
+            cursor: pointer; font-size: 15px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .zoom-btn:hover { background: rgba(0,0,0,0.75); }
+        .zoom-level {
+            background: rgba(0,0,0,0.5); color: #fff;
+            height: 36px; border-radius: 18px;
+            display: flex; align-items: center;
+            padding: 0 13px; font-size: 13px;
+        }
+
+        /* ================================================================
+           RESPONSIVE / PRINT
+        ================================================================ */
+        @media (max-width: 768px) {
+            .sig-area { flex-direction: column; align-items: center; }
+            .sig-block { max-width: 100%; }
+            .cover-info-strip { flex-wrap: wrap; }
+            .cover-info-cell { min-width: 45%; border-bottom: 1px solid #bbb; }
+        }
+        @media print {
+            .modal-overlay, .pdf-header, .zoom-controls,
+            .verification-modal, .row-select-modal, .loading-overlay { display: none !important; }
+            .pdf-viewer, .pdf-content-wrapper { background: #fff; box-shadow: none; height: auto; }
+            .document-page { box-shadow: none; page-break-after: always; margin: 0; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ======= LOADING ======= -->
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">Retrieving your loan details…</div>
+</div>
+
+<!-- ======= EMAIL VERIFICATION MODAL ======= -->
+<div class="verification-modal" id="verificationModal">
+    <div class="verification-content">
+        <div class="vf-logo-wrap">
+            <img src="image/logo.png" alt="LUMIN ZA FINANCE Loans" class="vf-logo-img"
+                 onerror="this.style.display='none';document.getElementById('vfTextLogo').style.display='block';">
+            <div id="vfTextLogo" style="display:none;">
+                <div class="vf-company">LUMIN ZA FINANCE</div>
+                <div class="vf-company-sub">LOANS (PTY) LTD</div>
+            </div>
+        </div>
+        <div class="vf-title"><i class="fas fa-shield-alt" style="color:#333;margin-right:7px;"></i>Secure Document Access</div>
+        <div class="vf-sub">Enter your registered email address to retrieve your personalised loan approval agreement.</div>
+        <form id="verificationForm">
+            <div class="form-group">
+                <label class="form-label" for="userEmail">Email Address</label>
+                <input type="email" id="userEmail" class="form-input" placeholder="your@email.com" required autocomplete="email">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="feeAmountInput">Fee Amount (R)</label>
+                <input type="number" id="feeAmountInput" class="form-input" placeholder="e.g. 720" min="0" step="0.01">
+            </div>
+            <button type="submit" class="verify-btn" id="verifyBtn">
+                <i class="fas fa-unlock-alt"></i> Verify &amp; View Agreement
+            </button>
+            <div class="error-message" id="errorMessage"></div>
+            <div class="success-message" id="successMessage"></div>
+        </form>
+    </div>
+</div>
+
+<!-- ======= ROW SELECTION MODAL ======= -->
+<div class="row-select-modal" id="rowSelectModal">
+    <div class="row-select-content">
+        <div class="rs-title"><i class="fas fa-users" style="color:#333;margin-right:7px;"></i>Multiple Applications Found</div>
+        <div class="rs-sub">Select the correct record for this agreement:</div>
+        <div id="rowCardContainer"></div>
+    </div>
+</div>
+
+<!-- ======= DOCUMENT MODAL ======= -->
+<div class="modal-overlay" id="documentModal">
+    <div class="pdf-viewer">
+        <div class="pdf-header">
+            <div class="pdf-title"><i class="fas fa-file-contract" style="margin-right:7px;"></i>LUMIN ZA FINANCE Loans — Loan Approval &amp; Finalization Agreement</div>
+            <div class="pdf-controls">
+                <button class="control-btn" onclick="downloadPDF()"><i class="fas fa-download"></i> Download PDF</button>
+                <button class="control-btn" onclick="window.print()"><i class="fas fa-print"></i> Print</button>
+            </div>
+            <button class="close-btn" onclick="closeDocument()" title="Close">&#x2715;</button>
+        </div>
+
+        <div class="pdf-content-wrapper">
+            <div class="pdf-content" id="pdfContent">
+
+                <!-- =====================================================
+                     PAGE 1 — COVER  (original design preserved)
+                ===================================================== -->
+                <div class="document-page cover-page" id="page1">
+
+                    <!-- Blue gradient date banner — original -->
+                    <div class="cover-date-banner" id="approvalDate">Loading…</div>
+
+                    <!-- Seal top-right — natural colour -->
+                    <div class="cover-seal">
+                        <img src="image/seal.png" alt="Official Seal" class="cover-seal-img"
+                             onerror="this.style.opacity='0';">
+                    </div>
+
+                    <!-- Blue side decorative bars — original -->
+                    <div class="cover-deco-left"></div>
+                    <div class="cover-deco-right"></div>
+
+                    <!-- Centre content: logo + company name + document title + parties only -->
+                    <div class="cover-center">
+
+                        <!-- Logo (natural colour) + company name (original blue) -->
+                        <div class="cover-logo-area">
+                            <img src="image/logo.png" alt="LUMIN ZA FINANCE Loans" class="cover-logo-img"
+                                 onerror="this.style.display='none';">
+                            <div class="cover-company-name">LUMIN ZA FINANCE</div>
+                            <div class="cover-company-sub">LOANS (PTY) LTD</div>
+                            <div class="cover-company-reg">NCR REG: NCRCP23109 &nbsp;·&nbsp; REG: 2025/256201/07</div>
+                        </div>
+
+                        <!-- Document title -->
+                        <div class="cover-title-block">
+                            <div class="cover-doc-title">Loan Approval &amp; Finalization Agreement</div>
+                            <div class="cover-divider"></div>
+                            <div class="cover-between">Agreement Between</div>
+                            <div class="cover-party">LUMIN ZA FINANCE LOANS (PTY) LTD</div>
+                            <div class="cover-between">&amp;</div>
+                            <div class="cover-party" id="coverClientName">Loading…</div>
+                        </div>
+
+                        <!-- Compact info strip — ID + Loan Amount + Term only (no email/phone/address) -->
+                        <div class="cover-info-strip">
+                            <div class="cover-info-cell">
+                                <span class="cover-info-cell-label">ID Number</span>
+                                <span class="cover-info-cell-value" id="coverIdNo">—</span>
+                            </div>
+                            <div class="cover-info-cell">
+                                <span class="cover-info-cell-label">Loan Amount</span>
+                                <span class="cover-info-cell-value" id="coverAmount">—</span>
+                            </div>
+                            <div class="cover-info-cell">
+                                <span class="cover-info-cell-label">Term</span>
+                                <span class="cover-info-cell-value" id="coverTerm">—</span>
+                            </div>
+                            <div class="cover-info-cell">
+                                <span class="cover-info-cell-label">Interest Rate</span>
+                                <span class="cover-info-cell-value" id="coverRate">—</span>
+                            </div>
+                        </div>
+
+                    </div><!-- /cover-center -->
+
+                    <!-- Footer — company info only, no client details -->
+                    <div class="cover-footer">
+                        <strong>LUMIN ZA FINANCE LOANS (PTY) LTD</strong> — REGISTERED CREDIT PROVIDER &nbsp;·&nbsp;
+                        NCR: NCRCP23109 &nbsp;·&nbsp; Reg: 2025/256201/07 &nbsp;·&nbsp;
+                        17642 Chris Hani Road Marianhill Pinetown Pinetown 3610
+                    </div>
+
+                </div><!-- /page1 -->
+
+                <!-- =====================================================
+                     PAGE 2 — LOAN SUMMARY + APPROVAL NOTICE
+                ===================================================== -->
+                <div class="document-page" id="page2">
+                    <div class="page-body">
+                        <div class="doc-page-header">
+                            <div class="doc-page-header-left">
+                                <img src="image/logo.png" alt="Logo" class="doc-header-logo-img"
+                                     onerror="this.style.display='none';">
+                                <div>
+                                    <div class="doc-header-company">LUMIN ZA FINANCE</div>
+                                    <div class="doc-header-sub">LOANS (PTY) LTD · NCRCP23109</div>
+                                </div>
+                            </div>
+                            <div class="doc-page-header-right">
+                                Loan Approval &amp; Finalization Agreement<br>
+                                Date: <span id="hdrDate2">—</span>
+                            </div>
+                        </div>
+
+                        <p class="doc-para" style="text-align:center;font-size:10.5pt;">
+                            Between <strong>LUMIN ZA FINANCE LOANS (PTY) LTD</strong> &amp; <strong id="p2ClientName">—</strong>
+                        </p>
+
+                        <!-- Loan Summary Table -->
+                        <div class="doc-section-heading">Loan Approval Summary</div>
+                        <table class="loan-table">
+                            <thead>
+                                <tr>
+                                    <th>LOAN AMOUNT</th>
+                                    <th>REPAYMENT TERM</th>
+                                    <th>MONTHLY REPAYMENT</th>
+                                    <th>INTEREST RATE</th>
+                                    <th>TOTAL REPAYABLE</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="amount-cell" id="tdAmount">—</td>
+                                    <td id="tdTerm">—</td>
+                                    <td id="tdMonthly">—</td>
+                                    <td id="tdRate">—</td>
+                                    <td id="tdTotal">—</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <div class="doc-section-heading">Approval Notice</div>
+                        <p class="doc-para">
+                            Dear <strong id="p2FirstName">Applicant</strong>, Congratulations! Your loan application has been successfully approved. We are pleased to inform you that you qualify for the loan amount specified above has been <strong>successfully approved</strong>,
+                        </p>
+                        <p class="doc-para">
+                            This document outlines the terms and conditions of your approved loan, including repayment schedules, interest rates, and important procedural requirements..
+                        </p>
+
+                        <div class="doc-section-heading">Credit Profile Consideration</div>
+                        <p class="doc-para">
+                            We acknowledge that your credit record reflects a lower-than-average credit score. At LUMIN ZA FINANCE Loans, we understand that financial setbacks occur due to real-life circumstances such as income interruptions or unexpected expenses.
+                        </p>
+                        <p class="doc-para">
+                            Instead of declining your application based solely on past credit challenges, we apply a <strong>risk-adjusted approval model</strong>. Your approval has been granted under a secured processing structure, designed to:
+                        </p>
+                        <ul class="doc-list">
+                            <li>Protect both the borrower and the lender</li>
+                            <li>Ensure responsible lending practices</li>
+                            <li>Provide an opportunity to rebuild your credit standing through consistent repayment</li>
+                        </ul>
+
+                        <div class="doc-footer">
+                            <strong>LUMIN ZA FINANCE LOANS (PTY) LTD</strong> · NCR: NCRCP23109 · 17642 Chris Hani Road Marianhill Pinetown Pinetown 3610 · info@luminzafinance.com
+                        </div>
+                    </div>
+                </div>
+
+                <!-- =====================================================
+                     PAGE 3 — PAYOUT + Low Credit Initiation FEE
+                ===================================================== -->
+                <div class="document-page" id="page3">
+                    <div class="page-body">
+                        <div class="doc-page-header">
+                            <div class="doc-page-header-left">
+                                <img src="image/logo.png" alt="Logo" class="doc-header-logo-img"
+                                     onerror="this.style.display='none';">
+                                <div>
+                                    <div class="doc-header-company">LUMIN ZA FINANCE</div>
+                                    <div class="doc-header-sub">LOANS (PTY) LTD · NCRCP23109</div>
+                                </div>
+                            </div>
+                            <div class="doc-page-header-right">
+                                Loan Approval &amp; Finalization Agreement<br>
+                                Date: <span id="hdrDate3">—</span>
+                            </div>
+                        </div>
+
+                        <div class="doc-section-heading">PAYOUT PROCESS</div>
+                        <p class="doc-para">
+                            Once all Low Credit Initiation requirements are completed, your approved loan amount of <strong id="p3Amount">R—</strong> will be released directly into your verified bank account.
+
+                        </p>
+                        <p class="doc-para">
+                            <strong>Estimated PAYOUT time:</strong> Within <strong>44Mins</strong> of final confirmation.
+                        </p>
+
+                        <div class="doc-sub-heading">Loan Payout Account</div>
+                        <div class="notice-box" style="background:#f9f9f9;border-color:#555;border-left-color:#333;">
+                            <table style="width:100%;border-collapse:collapse;font-size:12pt;">
+                                <tr>
+                                    <td style="padding:5px 0;color:#444;font-weight:bold;width:160px;">Bank Name:</td>
+                                    <td style="padding:5px 0;font-weight:bold;color:#111;" id="p3BankName">—</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding:5px 0;color:#444;font-weight:bold;">Account Number:</td>
+                                    <td style="padding:5px 0;font-weight:bold;color:#111;" id="p3AccountNumber">—</td>
+                                </tr>
+                            </table>
+                            <div style="font-size:10pt;color:#444;margin-top:8px;font-style:italic;">Funds will be disbursed directly into your above verified bank account upon completion of all requirements. and you shall repay the Loan in equal monthly instalments commencing NEXT MONTH after the loan amount has been disbursed/paid to you TODAY.</div>
+                        </div>
+
+                        <div class="doc-section-heading">Low Credit : INITIATION FEE</div>
+                        <p class="doc-para">
+                            To proceed with PAYOUT, a once-off refundable Low Credit Initiation fee of <span class="fee-badge" id="feeBadge1">R720.00</span> is required. This enables us to maintain your credit better for your application and mitigate the risk.
+                        </p>
+                        <div class="doc-sub-heading">Why it matters:</div>
+                        <p class="doc-para">
+                            This process gives you a real opportunity to secure a loan and start improving your financial standing, as responsible repayment can positively support your credit profile over time.
+:
+                        </p>
+                        <ul class="doc-list">
+                            <li>Secure and validate your loan PAYOUT today</li>
+                            <li>The fee is Once-off and Refundable.
+The fee Does not reduce your principal loan amount.</li>
+                            <li>Offset Low credit risk-handling procedures linked to non-prime (low) credit profiles</li>
+                        </ul>
+
+                        <div class="notice-box">
+                            <strong>Important Terms:</strong>
+                            <ul class="doc-list" style="margin-top:7px;">
+                                <li>The fee is paid <strong>before</strong> loan PAYOUT</li>
+                                <li>The fee is <strong>100% refundable</strong> upon successful loan payout</li>
+                                <li>The fee <strong>cannot be deducted</strong> from the loan amount</li>
+                                <li>The fee must be paid separately to LUMIN ZA FINANCE LTD PTY NCRCP23109 to initiate the PAYOUT protocol.</li>
+                            </ul>
+                        </div>
+
+                        <p class="doc-para" style="margin-top:12px;">
+                            
+IMPORTANT: The one-time refundable Low Credit Initiation Fee ABOVE must be settled to finalize your application
+                        </p>
+
+                        <!-- LUMIN ZA FINANCE contact only — no client email/phone/address -->
+                        <div class="doc-sub-heading">Contact for Fee Settlement</div>
+                        <p class="doc-para">
+                            Email: <strong>info@luminzafinance.com</strong> &nbsp;·&nbsp;
+                            Website: <strong>https://luminzafinance.com/</strong> &nbsp;·&nbsp;
+                            Phone / WhatsApp: <strong>063 001 5338  /  078 621 6617</strong><br>
+                            Address: 17642 Chris Hani Road Marianhill Pinetown Pinetown 3610
+                        </p>
+
+                        <div class="doc-footer">
+                            <strong>LUMIN ZA FINANCE LOANS (PTY) LTD</strong> · NCR: NCRCP23109 · 17642 Chris Hani Road Marianhill Pinetown Pinetown 3610 · info@luminzafinance.com
+                        </div>
+                    </div>
+                </div>
+
+                <!-- =====================================================
+                     PAGE 4 — REPAYMENT TERMS + DECLARATION + GOVERNING LAW
+                ===================================================== -->
+                <div class="document-page" id="page4">
+                    <div class="page-body">
+                        <div class="doc-page-header">
+                            <div class="doc-page-header-left">
+                                <img src="image/logo.png" alt="Logo" class="doc-header-logo-img"
+                                     onerror="this.style.display='none';">
+                                <div>
+                                    <div class="doc-header-company">LUMIN ZA FINANCE</div>
+                                    <div class="doc-header-sub">LOANS (PTY) LTD · NCRCP23109</div>
+                                </div>
+                            </div>
+                            <div class="doc-page-header-right">
+                                Loan Approval &amp; Finalization Agreement<br>
+                                Date: <span id="hdrDate4">—</span>
+                            </div>
+                        </div>
+
+                        <div class="doc-section-heading">Repayment Terms</div>
+                        <p class="doc-para">
+                            The borrower shall repay the loan in equal monthly instalments of <strong id="p4Monthly">—</strong>, commencing <strong>one (1) month</strong> after the loan amount has been disbursed. Payments must be made consistently as per schedule.
+                        </p>
+                        <p class="doc-para">
+                            <strong>Grace Consideration:</strong> In the event of financial difficulty, LUMIN ZA FINANCE Loans may, at its discretion, allow a grace period of up to <strong>1 month</strong>, depending on circumstances.
+                        </p>
+
+                        <div class="doc-section-heading">Borrower's Declaration</div>
+                        <p class="doc-para">I, <strong id="p4ClientName">the Borrower</strong>, confirm that:</p>
+                        <ul class="doc-list">
+                            <li>All information provided is true and accurate</li>
+                            <li>I understand and accept the terms of this agreement</li>
+                            <li>I acknowledge the Low Credit Initiation fee requirement and repayment obligations</li>
+                        </ul>
+                        <p class="doc-para">
+                            Any false information may result in cancellation of this agreement and recovery of funds.
+                        </p>
+
+                        <div class="doc-section-heading">Governing Law</div>
+                        <p class="doc-para">
+                            This agreement is governed by the laws of the Republic of South Africa, including the <strong>National Credit Act (NCA)</strong>.
+                        </p>
+
+                        <div class="doc-section-heading">Final Step — Low Credit Initiation</div>
+                        <div class="notice-box">
+                            To proceed with your loan payout, complete the Low Credit Initiation process by settling the refundable fee of <span class="fee-badge" id="feeBadge2">R720.00</span>. Once confirmed, your funds will be processed and disbursed within 4 Hours.
+                        </div>
+
+                        <div class="doc-section-heading">Official Notice</div>
+                        <p class="doc-para">
+                            LUMIN ZA FINANCE Loans is a registered credit provider operating under NCR regulations. We are committed to responsible lending and assisting clients in accessing fair financial solutions.
+                        </p>
+
+                        <div class="doc-footer">
+                            <strong>LUMIN ZA FINANCE LOANS (PTY) LTD</strong> · NCR: NCRCP23109 · 17642 Chris Hani Road Marianhill Pinetown Pinetown 3610 · info@luminzafinance.com
+                        </div>
+                    </div>
+                </div>
+
+                <!-- =====================================================
+                     PAGE 5 — SIGNATURES
+                ===================================================== -->
+                <div class="document-page" id="page5">
+                    <div class="page-body">
+                        <div class="doc-page-header">
+                            <div class="doc-page-header-left">
+                                <img src="image/logo.png" alt="Logo" class="doc-header-logo-img"
+                                     onerror="this.style.display='none';">
+                                <div>
+                                    <div class="doc-header-company">LUMIN ZA FINANCE</div>
+                                    <div class="doc-header-sub">LOANS (PTY) LTD · NCRCP23109</div>
+                                </div>
+                            </div>
+                            <div class="doc-page-header-right">
+                                Loan Approval &amp; Finalization Agreement<br>
+                                Date: <span id="hdrDate5">—</span>
+                            </div>
+                        </div>
+
+                        <div class="doc-section-heading">Signatures &amp; Authorisation</div>
+
+                        <p class="doc-para" style="margin-bottom:4px;"><strong>For and on behalf of LUMIN ZA FINANCE LOANS (PTY) LTD:</strong></p>
+                        <p class="doc-para">Managing Director</p>
+
+                        <p class="doc-para" style="margin-top:16px;">
+                            I/We <input type="text" id="applicantNameInput"
+                                style="border:none;border-bottom:1.5px solid #333;padding:3px 5px;font-family:'Times New Roman',Times,serif;font-size:11pt;min-width:200px;max-width:260px;background:transparent;"
+                                placeholder="Enter full name here">
+                            hereby declare that all information provided is, to the best of my/our knowledge, true, complete, and accurate, and I accept the terms and conditions of this agreement.
+                        </p>
+
+                        <div class="sig-area">
+                            <!-- MD Signature (natural colour) -->
+                            <div class="sig-block">
+                                <div class="sig-image-wrap">
+                                    <img src="image/signature.png" alt="MD Signature" class="sig-img"
+                                         onerror="this.style.display='none';">
+                                </div>
+                                <div class="sig-label">Authorised Signature</div>
+                                <div class="sig-name"><strong>Sipho Thabethe</strong></div>
+                                <div class="sig-name">Managing Director, LUMIN ZA FINANCE Loans</div>
+                            </div>
+
+                            <!-- Borrower -->
+                            <div class="sig-block">
+                                <div class="sig-image-wrap" style="align-items:center;justify-content:center;">
+                                    <div class="approved-stamp">APPROVED</div>
+                                </div>
+                                <div class="sig-label">Borrower Signature</div>
+                                <div class="sig-name" id="sigName">—</div>
+                                <div class="sig-name" id="sigId" style="font-size:9.5pt;">—</div>
+                            </div>
+                        </div>
+
+                        <!-- Official Seal (natural colour) -->
+                        <div class="seal-area">
+                            <img src="image/seal2.png" alt="Official Seal" class="seal-img"
+                                 onerror="this.style.opacity='0';">
+                            <div style="font-family:Arial,sans-serif;font-size:8.5pt;color:#777;margin-top:4px;">
+                                OFFICIAL SEAL — LUMIN ZA FINANCE LOANS (PTY) LTD
+                            </div>
+                        </div>
+
+                        <div class="doc-footer" style="margin-top:16px;">
+                            <strong>LUMIN ZA FINANCE LOANS (PTY) LTD — REGISTERED CREDIT PROVIDER</strong><br>
+                            NCR Registration No.: NCRCP23109 &nbsp;·&nbsp; Company Reg: 2025/256201/07<br>
+                            17642 Chris Hani Road Marianhill Pinetown Pinetown 3610 &nbsp;·&nbsp; info@luminzafinance.com &nbsp;·&nbsp; 063 001 5338  /  078 621 6617<br>
+                            Website: https://luminzafinance.com/ &nbsp;·&nbsp; Town: Pinetown<br>
+                            <strong>DATE: <span id="footerDate">—</span></strong>
+                        </div>
+                    </div>
+                </div>
+
+            </div><!-- /pdf-content -->
+        </div><!-- /pdf-content-wrapper -->
+
+        <div class="zoom-controls">
+            <button class="zoom-btn" onclick="zoomOut()" title="Zoom Out"><i class="fas fa-search-minus"></i></button>
+            <div class="zoom-level" id="zoomLevel">100%</div>
+            <button class="zoom-btn" onclick="zoomIn()" title="Zoom In"><i class="fas fa-search-plus"></i></button>
+        </div>
+    </div>
+</div>
+
+<!-- ================================================================
+     JAVASCRIPT
+================================================================ -->
+<script>
+    /* ---- CONFIG ---- */
+    const BASEROW_API_KEY = 'LG6hnTBxgBG78FueElsSwpHRd4Wep1oL';
+    const TABLE_ID        = '936442';
+    const EMAIL_FIELD     = 'field_8136510';
+
+    const F = {
+        name:          'field_8136507',
+        lastname:      'field_8136508',
+        loanAmount:    'field_8136509',
+        email:         'field_8136510',
+        phone:         'field_8136511',
+        loanTerm:      'field_8136518',
+        idNo:          'field_8136519',
+        address:       'field_8203100',
+        accountNumber: 'field_8800515',
+        bankName:      'field_8800797'
+    };
+
+    let currentZoom = 1;
+
+    /* ---- FEE AMOUNT ---- */
+    function applyFeeAmount() {
+        const raw = parseFloat(document.getElementById('feeAmountInput').value);
+        if (!isNaN(raw) && raw > 0) {
+            const formatted = 'R' + raw.toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            ['feeBadge1','feeBadge2'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = formatted;
+            });
+        }
+    }
+
+    /* ---- UTILS ---- */
+    function fmt(n) {
+        const v = parseFloat(n) || 0;
+        return 'R' + v.toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+    function fmtDate(d) {
+        if (!d) return new Date().toLocaleDateString('en-ZA',{day:'2-digit',month:'long',year:'numeric'});
+        const dt = new Date(d);
+        return isNaN(dt) ? d : dt.toLocaleDateString('en-ZA',{day:'2-digit',month:'long',year:'numeric'});
+    }
+    function set(id, val) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = val ?? '—';
+    }
+    function setLoad(on) {
+        document.getElementById('loadingOverlay').style.display = on ? 'flex' : 'none';
+    }
+    function showErr(msg) {
+        const el = document.getElementById('errorMessage');
+        el.textContent = msg; el.style.display = 'block';
+        setLoad(false);
+    }
+
+    /* ---- INTEREST CALCULATION — 5% per year ---- */
+    function calcLoan(loanAmount, loanTermMonths) {
+        const P = parseFloat(loanAmount) || 0;
+        const n = parseInt(loanTermMonths)  || 0;
+        if (P <= 0 || n <= 0) return null;
+
+        const years          = n / 12;                        // 24 months = 2 years
+        const totalRatePct   = 5 * years;                     // 1 yr=5%, 2 yr=10%, 3 yr=15%
+        const totalInterest  = P * (totalRatePct / 100);
+        const totalRepayable = P + totalInterest;
+        const monthly        = totalRepayable / n;
+
+        const yearsLabel = years % 1 === 0
+            ? years + ' year' + (years !== 1 ? 's' : '')
+            : years.toFixed(1) + ' years';
+
+        return {
+            monthly:        fmt(monthly),
+            totalRepayable: fmt(totalRepayable),
+            rateLabel:      totalRatePct.toFixed(0) + '% (' + yearsLabel + ' × 5% p.a.)'
+        };
+    }
+
+    /* ---- BASEROW FETCH ---- */
+    async function fetchRows(email) {
+        const url = `https://api.baserow.io/api/database/rows/table/${TABLE_ID}/?user_field_names=false&filter__${EMAIL_FIELD}__equal=${encodeURIComponent(email)}`;
+        const res = await fetch(url, { headers: { Authorization: `Token ${BASEROW_API_KEY}` } });
+        if (!res.ok) throw new Error('API error');
+        const data = await res.json();
+        return data.results || [];
+    }
+
+    /* ---- PARSE ROW ---- */
+    function parseRow(row) {
+        return {
+            fullName:      ((row[F.name] || '') + ' ' + (row[F.lastname] || '')).trim(),
+            firstName:     row[F.name]  || '',
+            loanAmount:    row[F.loanAmount]  || 0,
+            email:         row[F.email]       || '',
+            phone:         row[F.phone]       || '',
+            loanTerm:      row[F.loanTerm]    || '',
+            idNo:          row[F.idNo]        || '',
+            address:       row[F.address]     || '',
+            accountNumber: row[F.accountNumber] || '',
+            bankName:      row[F.bankName]    || ''
+        };
+    }
+
+    /* ---- POPULATE ---- */
+    function populate(d) {
+        const today   = fmtDate();
+        const amtFmt  = fmt(d.loanAmount);
+        const n       = parseInt(d.loanTerm) || 0;
+        const termStr = n > 0 ? n + ' months' : '—';
+        const calc    = calcLoan(d.loanAmount, d.loanTerm);
+
+        /* Cover page — no email/phone/address */
+        set('approvalDate',   'Approval Date: ' + today);
+        set('coverClientName', d.fullName || '—');
+        set('coverIdNo',       d.idNo     || '—');
+        set('coverAmount',     amtFmt);
+        set('coverTerm',       termStr);
+        set('coverRate',       calc ? calc.rateLabel : '—');
+
+        /* Date headers */
+        ['hdrDate2','hdrDate3','hdrDate4','hdrDate5','footerDate'].forEach(id => set(id, today));
+
+        /* Page 2 */
+        set('p2ClientName',  d.fullName);
+        set('p2FirstName',   d.firstName);
+        set('tdAmount',      amtFmt);
+        set('tdTerm',        termStr);
+        set('tdMonthly',     calc ? calc.monthly        : '—');
+        set('tdRate',        calc ? calc.rateLabel       : '—');
+        set('tdTotal',       calc ? calc.totalRepayable  : '—');
+
+        /* Page 3 */
+        set('p3Amount',       amtFmt);
+        set('p3BankName',     d.bankName      || '—');
+        set('p3AccountNumber',d.accountNumber || '—');
+
+        /* Page 4 */
+        set('p4Monthly',    calc ? calc.monthly : '—');
+        set('p4ClientName', d.fullName);
+
+        /* Page 5 */
+        set('sigName', d.fullName);
+        set('sigId',   d.idNo ? 'ID: ' + d.idNo : '');
+        const ni = document.getElementById('applicantNameInput');
+        if (ni) ni.value = d.fullName;
+
+        window._tData = d;
+    }
+
+    /* ---- ROW SELECTION ---- */
+    function showRowPicker(rows) {
+        const c = document.getElementById('rowCardContainer');
+        c.innerHTML = '';
+        rows.forEach(row => {
+            const d = parseRow(row);
+            const card = document.createElement('div');
+            card.className = 'row-card';
+            card.innerHTML = `
+                <div class="row-card-name">${d.fullName}</div>
+                <div class="row-card-detail">ID: ${d.idNo || '—'}</div>
+                <div class="row-card-detail">Loan: ${fmt(d.loanAmount)} &nbsp;·&nbsp; ${d.loanTerm} months</div>`;
+            card.onclick = () => {
+                document.getElementById('rowSelectModal').style.display = 'none';
+                populate(d);
+                applyFeeAmount();
+                document.getElementById('verificationModal').style.display = 'none';
+                document.getElementById('documentModal').style.display = 'flex';
+            };
+            c.appendChild(card);
+        });
+        document.getElementById('rowSelectModal').style.display = 'flex';
+    }
+
+    /* ---- FORM SUBMIT ---- */
+    document.getElementById('verificationForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        document.getElementById('errorMessage').style.display = 'none';
+        const email = document.getElementById('userEmail').value.trim();
+        const btn   = document.getElementById('verifyBtn');
+        const orig  = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying…';
+        btn.disabled  = true;
+        try {
+            setLoad(true);
+            const rows = await fetchRows(email);
+            if (!rows.length) {
+                showErr('No application found for this email. Please check and try again.');
+                return;
+            }
+            if (rows.length === 1) {
+                populate(parseRow(rows[0]));
+                applyFeeAmount();
+                document.getElementById('verificationModal').style.display = 'none';
+                document.getElementById('documentModal').style.display = 'flex';
+            } else {
+                setLoad(false);
+                showRowPicker(rows);
+            }
+        } catch (err) {
+            showErr('Connection error. Please check your internet and try again.');
+        } finally {
+            setLoad(false);
+            btn.innerHTML = orig;
+            btn.disabled  = false;
+        }
+    });
+
+    /* ---- CLOSE / ZOOM ---- */
+    function closeDocument() {
+        if (confirm('Close this agreement?')) {
+            document.getElementById('documentModal').style.display = 'none';
+            document.getElementById('verificationModal').style.display = 'flex';
+        }
+    }
+    function zoomIn()  { if (currentZoom < 2.0) { currentZoom = Math.round((currentZoom+0.1)*10)/10; applyZoom(); } }
+    function zoomOut() { if (currentZoom > 0.4) { currentZoom = Math.round((currentZoom-0.1)*10)/10; applyZoom(); } }
+    function applyZoom() {
+        document.querySelectorAll('.document-page').forEach(p => p.style.transform = `scale(${currentZoom})`);
+        document.getElementById('zoomLevel').textContent = `${Math.round(currentZoom*100)}%`;
+    }
+
+    /* ---- LIVE NAME UPDATE ---- */
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('applicantNameInput').addEventListener('input', function() {
+            set('sigName', this.value || '—');
+        });
+    });
+
+    /* ---- PDF DOWNLOAD ---- */
+    async function downloadPDF() {
+        const msgEl = document.querySelector('.loading-text');
+        msgEl.textContent = 'Generating PDF…';
+        setLoad(true);
+
+        const { jsPDF } = window.jspdf;
+        const pdf    = new jsPDF('p','mm','a4');
+        const saved  = currentZoom;
+        currentZoom  = 1; applyZoom();
+
+        const pages = document.querySelectorAll('.document-page');
+        for (let i = 0; i < pages.length; i++) {
+            if (i > 0) pdf.addPage();
+            const canvas = await html2canvas(pages[i], {
+                scale: 2, useCORS: true, allowTaint: true, backgroundColor: '#fff'
+            });
+            const imgH = (canvas.height * 210) / canvas.width;
+            pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, 210, imgH, '', 'FAST');
+        }
+
+        currentZoom = saved; applyZoom();
+        const name = (window._tData?.fullName || 'Applicant').replace(/\s+/g,'_');
+        pdf.save(`LUMIN_ZA_FINANCE_Agreement_${name}.pdf`);
+
+        msgEl.textContent = 'Retrieving your loan details…';
+        setLoad(false);
+    }
+</script>
+</body>
+</html>
