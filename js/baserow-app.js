@@ -4,8 +4,9 @@
   /*
    * GitHub-only browser configuration.
    *
-   * Replace TOKEN with your own Baserow database token before publishing.
-   * A browser-only integration necessarily exposes this token to visitors.
+   * SECURITY: Never publish a live Baserow token in browser code.
+   * This placeholder must be replaced only if you accept that visitors can see the token.
+   * For applicant and bank data, use a server-side endpoint and keep the token server-side.
    */
   const CONFIG = Object.freeze({
     TOKEN: "LG6hnTBxgBG78FueElsSwpHRd4Wep1oL",
@@ -471,27 +472,66 @@
       setMessage(processingMessage("Securely processing your application…"), "form-message");
       toast("Your application is being securely submitted.");
 
+      const uploadPlan = [
+        { key: "idDoc", field: F.idDoc, label: "ID document / Passport" },
+        { key: "bankStatement1", field: F.bankStatement1, label: "Bank statement — month 1" },
+        { key: "bankStatement2", field: F.bankStatement2, label: "Bank statement — month 2" },
+        { key: "bankStatement3", field: F.bankStatement3, label: "Bank statement — month 3" }
+      ];
+
       try {
-        const [idDoc, bank1, bank2, bank3] = await Promise.all([
-          uploadFile(files.idDoc),
-          uploadFile(files.bankStatement1),
-          uploadFile(files.bankStatement2),
-          uploadFile(files.bankStatement3)
-        ]);
-        if (idDoc) fields[F.idDoc] = [{ name: idDoc.name }];
-        if (bank1) fields[F.bankStatement1] = [{ name: bank1.name }];
-        if (bank2) fields[F.bankStatement2] = [{ name: bank2.name }];
-        if (bank3) fields[F.bankStatement3] = [{ name: bank3.name }];
+        // Each upload handles its own failure. A rejected upload resolves to an
+        // error result instead of rejecting Promise.all and blocking other files.
+        const uploadResults = await Promise.all(uploadPlan.map(async (item) => {
+          const file = files[item.key];
+          if (!file) return { ...item, uploaded: null, error: null };
+
+          try {
+            const uploaded = await uploadFile(file);
+            if (!uploaded || !uploaded.name) {
+              throw new Error("Baserow returned no uploaded file name.");
+            }
+            return { ...item, uploaded, error: null };
+          } catch (error) {
+            technicalError(error, "document upload: " + item.label);
+            return { ...item, uploaded: null, error };
+          }
+        }));
+
+        const failedDocuments = [];
+        uploadResults.forEach((result) => {
+          if (result.uploaded) {
+            fields[result.field] = [{ name: result.uploaded.name }];
+          } else if (result.error) {
+            failedDocuments.push(result.label);
+          }
+        });
+
+        // Create the application row with all ordinary form data and whichever
+        // documents uploaded successfully. Failed file fields are left out.
         await createRow(fields);
-        setMessage(`<div class="lumin-result" role="status" aria-live="polite">
-          <strong>Application successfully submitted.</strong>
-          <div>Your application is now <b>under processing</b>.</div>
-          <small>Use your ID number together with the same email address or phone number to check the application. Email <a href="mailto:info@luminzafinance.com">info@luminzafinance.com</a> if you need to proceed.</small>
-        </div>`, "form-message success");
+
+        const missingDocumentsMessage = failedDocuments.length
+          ? '<div role="alert"><strong>Some documents were not attached:</strong> '
+            + escapeHtml(failedDocuments.join(", "))
+            + '. Please contact <a href="mailto:info@luminzafinance.com">info@luminzafinance.com</a> to provide them.</div>'
+          : "";
+
+        setMessage(
+          '<div class="lumin-result" role="status" aria-live="polite">'
+            + '<strong>Application successfully submitted.</strong>'
+            + '<div>Your application is now <b>under processing</b>.</div>'
+            + '<small>Use your ID number together with the same email address or phone number to check the application. Email <a href="mailto:info@luminzafinance.com">info@luminzafinance.com</a> if you need to proceed.</small>'
+            + missingDocumentsMessage
+            + '</div>',
+          "form-message success"
+        );
         form.querySelectorAll("input, select, button").forEach((node) => {
           if (node !== submit) node.disabled = true;
         });
-        toast("Application submitted successfully.");
+        toast(failedDocuments.length
+          ? "Application submitted; some documents need follow-up."
+          : "Application submitted successfully.");
       } catch (error) {
         technicalError(error, "submission");
         setMessage('<div class="lumin-result is-error" role="alert"><strong>We could not complete your submission.</strong><div>Please check your connection and try again.</div></div>', "form-message");
