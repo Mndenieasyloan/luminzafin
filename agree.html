@@ -975,26 +975,21 @@ IMPORTANT: The one-time Low Credit Initiation Fee ABOVE must be settled to final
         setLoad(false);
     }
 
-    /* ---- INTEREST CALCULATION — 5% per year ---- */
+    /* ---- FLAT INTEREST CALCULATION ---- */
     function calcLoan(loanAmount, loanTermMonths) {
         const P = parseFloat(loanAmount) || 0;
         const n = parseInt(loanTermMonths)  || 0;
         if (P <= 0 || n <= 0) return null;
 
-        const years          = n / 12;                        // 24 months = 2 years
-        const totalRatePct   = 5 * years;                     // 1 yr=5%, 2 yr=10%, 3 yr=15%
-        const totalInterest  = P * (totalRatePct / 100);
+        const ratePct        = n > 48 ? 10 : 5;
+        const totalInterest  = P * (ratePct / 100);
         const totalRepayable = P + totalInterest;
         const monthly        = totalRepayable / n;
-
-        const yearsLabel = years % 1 === 0
-            ? years + ' year' + (years !== 1 ? 's' : '')
-            : years.toFixed(1) + ' years';
 
         return {
             monthly:        fmt(monthly),
             totalRepayable: fmt(totalRepayable),
-            rateLabel:      totalRatePct.toFixed(0) + '% (' + yearsLabel + ' × 5% p.a.)'
+            rateLabel:      ratePct + '%'
         };
     }
 
