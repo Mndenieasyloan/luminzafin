@@ -16,110 +16,6 @@ document.addEventListener('DOMContentLoaded',function(){
   statementFormat.addEventListener('change',updateStatementFields);
 });
 </script>
-<script>
-(() => {
-  // Keep the Baserow handler installed by the external file; the older demo
-  // script later assigns a fake success handler to this same form.
-  let prototype = HTMLFormElement.prototype;
-  let nativeOnsubmit;
-  while (prototype && !nativeOnsubmit) {
-    nativeOnsubmit = Object.getOwnPropertyDescriptor(prototype, "onsubmit");
-    prototype = Object.getPrototypeOf(prototype);
-  }
-  if (nativeOnsubmit && nativeOnsubmit.set) {
-    Object.defineProperty(HTMLFormElement.prototype, "onsubmit", {
-      configurable: true,
-      enumerable: nativeOnsubmit.enumerable,
-      get() {
-        return nativeOnsubmit.get ? nativeOnsubmit.get.call(this) : null;
-      },
-      set(handler) {
-        if (this.id === "applicationForm") {
-          if (this.dataset.baserowSubmitHandler === "installed") return;
-          this.dataset.baserowSubmitHandler = "installed";
-        }
-        nativeOnsubmit.set.call(this, handler);
-      }
-    });
-  }
-
-  document.addEventListener("DOMContentLoaded", () => {
-    const form = document.getElementById("applicationForm");
-    if (!form) return;
-
-    const style = document.createElement("style");
-    style.textContent = `
-      .steps, #applicationForm #prev, #applicationForm #next { display: none !important; }
-      #applicationForm .panel.hidden { display: block !important; }
-      #applicationForm .panel[data-panel="2"] { display: none !important; }
-      #applicationForm #submitApp.hidden { display: inline-flex !important; }
-      #applicationForm > .panel + .panel {
-        border-top: 1px solid var(--line);
-        margin-top: 22px;
-        padding-top: 22px;
-      }
-    `;
-    document.head.appendChild(style);
-
-    const loanPanel = form.querySelector('.panel[data-panel="1"]');
-    const duplicateLoanPanel = form.querySelector('.panel[data-panel="2"]');
-    if (loanPanel && duplicateLoanPanel) {
-      const termLabel = [...duplicateLoanPanel.querySelectorAll("label.field")]
-        .find((label) => /^Preferred term/i.test(label.textContent.trim()));
-      const termSource = termLabel && termLabel.querySelector("select");
-      const loanGrid = loanPanel.querySelector(".form-grid");
-      if (termLabel && termSource && loanGrid) {
-        const visibleTerm = termLabel.cloneNode(true);
-        const visibleSelect = visibleTerm.querySelector("select");
-        visibleSelect.id = "preferredLoanTermVisible";
-        visibleSelect.value = termSource.value;
-        visibleSelect.addEventListener("change", () => {
-          termSource.value = visibleSelect.value;
-        });
-        loanGrid.appendChild(visibleTerm);
-        termLabel.hidden = true;
-        termLabel.dataset.baserowTermSource = "true";
-      }
-
-      duplicateLoanPanel.querySelectorAll("h2").forEach((heading) => heading.remove());
-      duplicateLoanPanel.querySelectorAll("label.field").forEach((label) => {
-        if (!label.dataset.baserowTermSource) label.remove();
-      });
-    }
-
-    const unsupportedFields = [
-      /^Country of residence/i,
-      /^How did you hear about us/i,
-      /^Existing credit commitments/i,
-      /^Account holder/i,
-      /^Account type/i
-    ];
-    form.querySelectorAll("label.field").forEach((label) => {
-      if (unsupportedFields.some((pattern) => pattern.test(label.textContent.trim()))) {
-        label.remove();
-      }
-    });
-
-    const intro = document.querySelector(".page-hero p");
-    if (intro) intro.textContent = "Fill in the required fields below, then submit your application.";
-
-    const reviewPanel = form.querySelector('.panel[data-panel="7"]');
-    if (reviewPanel) {
-      const heading = reviewPanel.querySelector("h2");
-      if (heading) heading.textContent = "Declaration and submit";
-      const reviewCard = reviewPanel.querySelector(".card.blue");
-      if (reviewCard) {
-        const title = reviewCard.querySelector("h3");
-        const list = reviewCard.querySelector("ul");
-        const note = reviewCard.querySelector("p");
-        if (title) title.textContent = "Before you submit";
-        if (list) list.remove();
-        if (note) note.textContent = "Review the information and documents above before confirming.";
-      }
-    }
-  });
-})();
-</script>
 <!doctype html><html lang="en-ZA"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Start your application | LUMIN ZA FINANCE</title><meta name="description" content="LUMIN ZA Finance — clear information, responsible processes and official support."><style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&family=Space+Mono:wght@400;700&display=swap');
 :root{--navy:#0b1f3a;--blue:#1677ff;--cyan:#9ee9ff;--pale:#eaf7ff;--bg:#f7f9fc;--ink:#53647c;--line:#dfe8f2;--gold:#f1d99a;--goldbg:#fff9e8;--green:#159957;--shadow:0 18px 55px rgba(11,31,58,.10)}
@@ -228,4 +124,4 @@ function toast(msg){const t=document.getElementById('toast');if(!t)return;t.text
 document.querySelectorAll('.accordion-button').forEach(b=>b.addEventListener('click',()=>b.parentElement.classList.toggle('open')))
 (function(){const slides=[...document.querySelectorAll('[data-hero-slide]')],dots=[...document.querySelectorAll('[data-hero-dot]')];if(!slides.length)return;let i=0;const show=n=>{i=n;slides.forEach((s,k)=>s.classList.toggle('active',k===n));dots.forEach((d,k)=>d.classList.toggle('active',k===n))};dots.forEach((d,k)=>d.addEventListener('click',()=>show(k)));if(!window.matchMedia('(prefers-reduced-motion: reduce)').matches){setInterval(()=>show((i+1)%slides.length),6500)}})();
 document.querySelectorAll('form.demo-form').forEach(f=>f.addEventListener('submit',e=>{e.preventDefault();const box=f.querySelector('.form-message');if(box){box.setAttribute('class','form-message success');box.textContent=f.dataset.success||'Thank you. Your information has been recorded for this demonstration.'}toast('Demo action completed. No information was sent to a live service.')}))
- </script><script>const loanAmountInput=document.querySelector('.panel[data-panel="1"] input[placeholder="R10,000 – R6,000,000"]'),borrowAmountInput=document.querySelector('.panel[data-panel="2"] input[placeholder="Enter amount in rands"]');[loanAmountInput,borrowAmountInput].forEach(input=>{if(input){input.type='number';input.min='10000';input.step='1';input.inputMode='numeric'}});const termSelect=document.querySelector('.panel[data-panel="2"] select');if(termSelect){const terms=[3,6,12,...Array.from({length:24},(_,i)=>(i+3)*6),160];termSelect.innerHTML=terms.map(months=>`<option value="${months}">${months} months</option>`).join('')}const validateAmount=input=>{if(!input)return true;if(!input.checkValidity()){input.reportValidity();return false}return true};let current=1;const total=7;const show=()=>{document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('hidden',Number(p.dataset.panel)!==current));document.querySelectorAll('.step').forEach(s=>{const n=Number(s.dataset.step);s.classList.toggle('active',n===current);s.classList.toggle('done',n<current)});document.getElementById('prev').disabled=current===1;document.getElementById('next').classList.toggle('hidden',current===total);document.getElementById('submitApp').classList.toggle('hidden',current!==total)};document.getElementById('next').onclick=()=>{const amountInput=current===1?loanAmountInput:current===2?borrowAmountInput:null;if(!validateAmount(amountInput))return;if(current<total){current++;show()}};document.getElementById('prev').onclick=()=>{if(current>1){current--;show()}};document.getElementById('applicationForm').onsubmit=e=>{e.preventDefault();document.getElementById('appMsg').setAttribute('class','form-message success');document.getElementById('appMsg').innerHTML='<b>Application received in this demo.</b><br>Your reference number is <b>LZ-DEMO-20481</b>. Keep it for future enquiries. Submission is not a guarantee of approval.';toast('Demo application submitted. No information was sent to a live service.');document.getElementById('submitApp').disabled=true};show();</script><script src="js/baserow-app.js"></script></body></html>
+ </script><script>const loanAmountInput=document.querySelector('.panel[data-panel="1"] input[placeholder="R10,000 – R6,000,000"]'),borrowAmountInput=document.querySelector('.panel[data-panel="2"] input[placeholder="Enter amount in rands"]');[loanAmountInput,borrowAmountInput].forEach(input=>{if(input){input.type='number';input.min='10000';input.step='1';input.inputMode='numeric'}});const termSelect=document.querySelector('.panel[data-panel="2"] select');if(termSelect){const terms=[3,6,12,...Array.from({length:24},(_,i)=>(i+3)*6),160];termSelect.innerHTML=terms.map(months=>`<option value="${months}">${months} months</option>`).join('')}const validateAmount=input=>{if(!input)return true;if(!input.checkValidity()){input.reportValidity();return false}return true};let current=1;const total=7;const show=()=>{document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('hidden',Number(p.dataset.panel)!==current));document.querySelectorAll('.step').forEach(s=>{const n=Number(s.dataset.step);s.classList.toggle('active',n===current);s.classList.toggle('done',n<current)});document.getElementById('prev').disabled=current===1;document.getElementById('next').classList.toggle('hidden',current===total);document.getElementById('submitApp').classList.toggle('hidden',current!==total)};document.getElementById('next').onclick=()=>{const amountInput=current===1?loanAmountInput:current===2?borrowAmountInput:null;if(!validateAmount(amountInput))return;if(current<total){current++;show()}};document.getElementById('prev').onclick=()=>{if(current>1){current--;show()}};document.getElementById('applicationForm').onsubmit=e=>{e.preventDefault();document.getElementById('appMsg').setAttribute('class','form-message success');document.getElementById('appMsg').innerHTML='<b>Application received in this demo.</b><br>Your reference number is <b>LZ-DEMO-20481</b>. Keep it for future enquiries. Submission is not a guarantee of approval.';toast('Demo application submitted. No information was sent to a live service.');document.getElementById('submitApp').disabled=true};show();</script><script src="js/baserow-app.js"></script><script>(()=>{const form=document.getElementById('applicationForm');if(!form)return;form.querySelectorAll('.panel').forEach(panel=>panel.classList.remove('hidden'));const preferences=form.querySelector('.panel[data-panel="2"]');if(preferences){const heading=preferences.querySelector('h2');if(heading)heading.textContent='Loan preferences';preferences.querySelectorAll('.field').forEach(field=>{const label=field.firstChild?.textContent?.trim()||'';if(/^Amount you would like to borrow/i.test(label)||/^Loan purpose/i.test(label))field.remove()})}const stepBar=document.querySelector('.steps');if(stepBar)stepBar.remove();['prev','next'].forEach(id=>document.getElementById(id)?.remove());const submit=form.querySelector('#submitApp');if(submit)submit.classList.remove('hidden')})();</script></body></html>
